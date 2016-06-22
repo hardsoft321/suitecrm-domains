@@ -93,6 +93,7 @@ class Domain extends SugarBean
             'site_url' => self::buildUrlForDomain($GLOBALS['sugar_config']['site_url'], $this->domain_name, $domainLevel),
             'unique_key' => md5(create_guid()),
             'upload_dir' => "domains/{$this->domain_name}/upload/",
+            'cache_dir' => "domains/{$this->domain_name}/cache/", //кэш нужен разный, как минимум, для файла крона cache/modules/Schedulers/lastrun
         );
         foreach($overrideArray as $key => $val) {
             if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {

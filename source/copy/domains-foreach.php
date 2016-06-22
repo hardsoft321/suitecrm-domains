@@ -11,7 +11,7 @@ if(count($argv) < 2) {
     exit(2);
 }
 
-$command = escapeshellcmd($argv[1]);
+$command = $argv[1]; //экранировать не надо, так как pipe (|) экранируется
 
 chdir(dirname(__FILE__));
 
