@@ -8,3 +8,11 @@
 
 Есть upgrade unsafe файлы.
 Есть файлы, скопированные из SuiteCRM 7.6.4 и переделанные - в modules/Domains/install/
+
+Запуск команд для каждого домена:
+  php domains-foreach.php <shell_command>
+например
+  php domains-foreach.php "spm repair | spm dbquery"
+
+Запуск крон для каждого домена:
+  php domains-foreach.php "php domains-precron.php && php cron.php && php domains-postcron.php"

@@ -93,7 +93,9 @@ class Domain extends SugarBean
             'site_url' => self::buildUrlForDomain($GLOBALS['sugar_config']['site_url'], $this->domain_name, $domainLevel),
             'unique_key' => md5(create_guid()),
             'upload_dir' => "domains/{$this->domain_name}/upload/",
-            'cache_dir' => "domains/{$this->domain_name}/cache/", //кэш нужен разный, как минимум, для файла крона cache/modules/Schedulers/lastrun
+            //'cache_dir' => "domains/{$this->domain_name}/cache/", //кэш нужен разный, как минимум, для файла крона cache/modules/Schedulers/lastrun
+                                                                    //с другой стороны, шугар обращается в файлы типа cache/jsLanguage/Accounts/ru_ru.js
+                                                                    //поэтому сделал файлы domains-precron.php, domains-postcron.php, а кэш общий
         );
         foreach($overrideArray as $key => $val) {
             if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {
@@ -207,7 +209,13 @@ class Domain extends SugarBean
         if(preg_match("#^http(s?)\://([^/]+)(.*)$#", $site_url, $matches)) {
             $host = $matches[2];
             $parts = explode('.', $host);
-            $newHost = implode('.', array_merge(array($domain), array_slice($parts, -($domainLevel-1))));
+            if(count($parts) == $domainLevel - 1) {
+                array_unshift($parts, 'admin');
+            }
+            if(count($parts) >= $domainLevel) {
+                $parts[count($parts) - $domainLevel] = $domain;
+            }
+            $newHost = implode('.', $parts);
             return 'http'.$matches[1].'://'.$newHost.$matches[3];
         }
         return false;
@@ -218,7 +226,13 @@ class Domain extends SugarBean
         if(preg_match("#^(.+)@(.+)$#", $email, $matches)) {
             $host = $matches[2];
             $parts = explode('.', $host);
-            $newHost = implode('.', array_merge(array($domain), array_slice($parts, -($domainLevel-1))));
+            if(count($parts) == $domainLevel - 1) {
+                array_unshift($parts, 'admin');
+            }
+            if(count($parts) >= $domainLevel) {
+                $parts[count($parts) - $domainLevel] = $domain;
+            }
+            $newHost = implode('.', $parts);
             return $matches[1].'@'.$newHost;
         }
         return false;
