@@ -580,7 +580,7 @@ installLog('Save user settings..');
 $current_user = new User();
 $current_user->retrieve(1);
 $current_user->is_admin = '1';
-$sugar_config = get_sugar_config_defaults();
+//$sugar_config = get_sugar_config_defaults();
 
 // set local settings -  if neccessary you can set here more fields as named in User module / EditView form...
 if(isset($_REQUEST['timezone']) && $_REQUEST['timezone']) {

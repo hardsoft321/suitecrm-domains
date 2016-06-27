@@ -69,6 +69,8 @@ class Domain extends SugarBean
 
         $fromaddress = $this->db->getOne("SELECT value FROM config WHERE category = 'notify' AND name = 'fromaddress'");
         $outboundEmail = $this->db->fetchOne("SELECT mail_smtpserver, mail_smtpport, mail_smtpauth_req, mail_smtpuser, mail_smtppass FROM outbound_email WHERE user_id = 1 AND deleted = 0 AND name = 'system' AND type = 'system'");
+        $user = BeanFactory::getBean('Users', '1');
+        $adminEmail = $user ? $user->email1 : '';
 
         mkdir_recursive("domains/{$this->domain_name}");
         make_writable("domains/{$this->domain_name}");
@@ -79,6 +81,7 @@ class Domain extends SugarBean
         }
         $dbUserPassword = self::generatePassword(10);
         $domainLevel = !empty($GLOBALS['sugar_config']['domain_level']) ? $GLOBALS['sugar_config']['domain_level'] : 3;
+        $newHost = self::buildHostForDomain($GLOBALS['sugar_config']['host_name'], $this->domain_name, $domainLevel);
         $overideString = "<?php\n"
                 .'// created: ' . date('Y-m-d H:i:s') . "\n";
         $overrideArray = array(
@@ -87,7 +90,7 @@ class Domain extends SugarBean
                 'db_user_name' => $setup_db_sugarsales_user,
                 'db_password' => $dbUserPassword,
             ),
-            'http_referer' => array('list' => array($this->domain_name.'.'.$GLOBALS['sugar_config']['host_name'])),
+            'http_referer' => array('list' => array($newHost)),
             'log_dir' => "domains/{$this->domain_name}",
             'log_file' => 'suitecrm.log',
             'site_url' => self::buildUrlForDomain($GLOBALS['sugar_config']['site_url'], $this->domain_name, $domainLevel),
@@ -97,22 +100,6 @@ class Domain extends SugarBean
                                                                     //с другой стороны, шугар обращается в файлы типа cache/jsLanguage/Accounts/ru_ru.js
                                                                     //поэтому сделал файлы domains-precron.php, domains-postcron.php, а кэш общий
         );
-        foreach($overrideArray as $key => $val) {
-            if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {
-                if (is_string($val) && strcmp($val, 'true') == 0) {
-                    $val = true;
-                    //$this->config[$key] = $val;
-                }
-                if (is_string($val) && strcmp($val, 'false') == 0) {
-                    $val = false;
-                    //$this->config[$key] = false;
-                }
-            }
-            $overideString .= override_value_to_string_recursive2('sugar_config', $key, $val);
-        }
-        $fp = sugar_fopen($domainConfigFile, 'w');
-        fwrite($fp, $overideString);
-        fclose($fp);
 
         global $beanFiles;
         global $dictionary;
@@ -144,12 +131,16 @@ class Domain extends SugarBean
 
         require 'modules/Domains/install/performSetup.php';
         $db = DBManagerFactory::getInstance(); //это база поддомена
+
+        //настройка адреса отправителя
         if($fromaddress) {
             $domainFromaddress = self::buildEmailForDomain($fromaddress, $this->domain_name, $domainLevel);
             if($domainFromaddress) {
                 $db->query("UPDATE config SET value = '".$db->quote($domainFromaddress)."' WHERE category = 'notify' AND name = 'fromaddress'");
             }
         }
+
+        //настройка smtp
         if($outboundEmail) {
             $oe = new OutboundEmail();
             $oe = $oe->getSystemMailerSettings();
@@ -162,10 +153,42 @@ class Domain extends SugarBean
         }
         //TODO: возможно прочие настройки из таблицы config нужно скопировать
 
+        //email админа
+        if($adminEmail) {
+            $user = BeanFactory::getBean('Users', '1');
+            if($user) {
+                $user->email1 = $adminEmail;
+                $user->save();
+            }
+        }
+
+        //основная запись контрагента
         $acc = BeanFactory::newBean('Accounts');
         $acc->name = $this->name;
         $acc->save();
         $db->query("UPDATE accounts SET id = 'main' WHERE id = '{$acc->id}'"); //id контрагента = main для главной записи
+
+        //копирование id созданных почтовых шаблонов
+        $overrideArray['passwordsetting']['generatepasswordtmpl'] = $GLOBALS['sugar_config']['passwordsetting']['generatepasswordtmpl'];
+        $overrideArray['passwordsetting']['lostpasswordtmpl'] = $GLOBALS['sugar_config']['passwordsetting']['lostpasswordtmpl'];
+
+        //сохранение файла config.php домена
+        foreach($overrideArray as $key => $val) {
+            if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {
+                if (is_string($val) && strcmp($val, 'true') == 0) {
+                    $val = true;
+                    //$this->config[$key] = $val;
+                }
+                if (is_string($val) && strcmp($val, 'false') == 0) {
+                    $val = false;
+                    //$this->config[$key] = false;
+                }
+            }
+            $overideString .= override_value_to_string_recursive2('sugar_config', $key, $val);
+        }
+        $fp = sugar_fopen($domainConfigFile, 'w');
+        fwrite($fp, $overideString);
+        fclose($fp);
 
         unset($_SESSION['setup_db_type']);
         unset($_SESSION['setup_db_manager']);
@@ -204,35 +227,33 @@ class Domain extends SugarBean
         return $str;
     }
 
-    protected function buildUrlForDomain($site_url, $domain, $domainLevel)
+    protected static function buildHostForDomain($host, $domain, $domainLevel)
+    {
+        $parts = explode('.', $host);
+        if(count($parts) == $domainLevel - 1) {
+            array_unshift($parts, 'admin');
+        }
+        if(count($parts) >= $domainLevel) {
+            $parts[count($parts) - $domainLevel] = $domain;
+        }
+        return implode('.', $parts);
+    }
+
+    protected static function buildUrlForDomain($site_url, $domain, $domainLevel)
     {
         if(preg_match("#^http(s?)\://([^/]+)(.*)$#", $site_url, $matches)) {
             $host = $matches[2];
-            $parts = explode('.', $host);
-            if(count($parts) == $domainLevel - 1) {
-                array_unshift($parts, 'admin');
-            }
-            if(count($parts) >= $domainLevel) {
-                $parts[count($parts) - $domainLevel] = $domain;
-            }
-            $newHost = implode('.', $parts);
+            $newHost = self::buildHostForDomain($host, $domain, $domainLevel);
             return 'http'.$matches[1].'://'.$newHost.$matches[3];
         }
         return false;
     }
 
-    protected function buildEmailForDomain($email, $domain, $domainLevel)
+    protected static function buildEmailForDomain($email, $domain, $domainLevel)
     {
         if(preg_match("#^(.+)@(.+)$#", $email, $matches)) {
             $host = $matches[2];
-            $parts = explode('.', $host);
-            if(count($parts) == $domainLevel - 1) {
-                array_unshift($parts, 'admin');
-            }
-            if(count($parts) >= $domainLevel) {
-                $parts[count($parts) - $domainLevel] = $domain;
-            }
-            $newHost = implode('.', $parts);
+            $newHost = self::buildHostForDomain($host, $domain, $domainLevel);
             return $matches[1].'@'.$newHost;
         }
         return false;
