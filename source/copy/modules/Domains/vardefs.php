@@ -27,5 +27,14 @@ $dictionary['Domain'] = array(
             'required' => true,
             'reportable'=>false,
         ),
+        'admin_email' => array(
+            'name' => 'admin_email',
+            'vname' => 'LBL_ADMIN_EMAIL',
+            'type' => 'varchar',
+            'len' => 255,
+            'source'=>'non-db',
+            'required' => true,
+            'reportable'=>false,
+        ),
     ),
 );

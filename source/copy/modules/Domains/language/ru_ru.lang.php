@@ -11,4 +11,5 @@ $mod_strings = array(
     'LBL_DOMAIN_NAME' => 'Домен',
     'LNK_NEW_DOMAIN' => 'Добавить домен',
     'LNK_DOMAIN_LIST' => 'Все домены',
+    'LBL_ADMIN_EMAIL' => 'Email администратора',
 );

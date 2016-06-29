@@ -19,5 +19,7 @@
 например
   php domains-foreach.php "spm repair | spm dbquery"
 
+При этом имя домена доступно через переменную окружения SUGAR_DOMAIN.
+
 Запуск крон для каждого домена:
   php domains-foreach.php "php domains-precron.php && php cron.php && php domains-postcron.php"

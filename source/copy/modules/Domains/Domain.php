@@ -71,6 +71,9 @@ class Domain extends SugarBean
         $outboundEmail = $this->db->fetchOne("SELECT mail_smtpserver, mail_smtpport, mail_smtpauth_req, mail_smtpuser, mail_smtppass FROM outbound_email WHERE user_id = 1 AND deleted = 0 AND name = 'system' AND type = 'system'");
         $user = BeanFactory::getBean('Users', '1');
         $adminEmail = $user ? $user->email1 : '';
+        if(!empty($this->admin_email)) {
+            $adminEmail = $this->admin_email;
+        }
 
         mkdir_recursive("domains/{$this->domain_name}");
         make_writable("domains/{$this->domain_name}");
@@ -82,6 +85,7 @@ class Domain extends SugarBean
         $dbUserPassword = self::generatePassword(10);
         $domainLevel = !empty($GLOBALS['sugar_config']['domain_level']) ? $GLOBALS['sugar_config']['domain_level'] : 3;
         $newHost = self::buildHostForDomain($GLOBALS['sugar_config']['host_name'], $this->domain_name, $domainLevel);
+        $newSiteUrl = self::buildUrlForDomain($GLOBALS['sugar_config']['site_url'], $this->domain_name, $domainLevel);
         $overideString = "<?php\n"
                 .'// created: ' . date('Y-m-d H:i:s') . "\n";
         $overrideArray = array(
@@ -93,7 +97,7 @@ class Domain extends SugarBean
             'http_referer' => array('list' => array($newHost)),
             'log_dir' => "domains/{$this->domain_name}",
             'log_file' => 'suitecrm.log',
-            'site_url' => self::buildUrlForDomain($GLOBALS['sugar_config']['site_url'], $this->domain_name, $domainLevel),
+            'site_url' => $newSiteUrl,
             'unique_key' => md5(create_guid()),
             'upload_dir' => "domains/{$this->domain_name}/upload/",
             //'cache_dir' => "domains/{$this->domain_name}/cache/", //кэш нужен разный, как минимум, для файла крона cache/modules/Schedulers/lastrun
@@ -160,6 +164,10 @@ class Domain extends SugarBean
                 $user->email1 = $adminEmail;
                 $user->save();
             }
+            $_POST['user_name'] = 'admin';
+            $_POST['user_email'] = $adminEmail;
+            $url=$GLOBALS['sugar_config']['site_url'] = $newSiteUrl;
+            require 'modules/Users/GeneratePassword.php';
         }
 
         //основная запись контрагента

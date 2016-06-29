@@ -26,6 +26,10 @@ class DomainsViewEdit extends ViewEdit
 
     function display()
     {
+        global $current_user;
+        if(!empty($current_user->email1)) {
+            $this->bean->admin_email = $current_user->email1;
+        }
         parent::display();
         if(!empty($_SESSION['flash_message'])) {
             echo '<script>ajaxStatus.flashStatus(',json_encode($_SESSION['flash_message']),', 3000);</script>';

@@ -32,6 +32,10 @@ $viewdefs ['Domains'] = array (
                     'domain_name',
                     'name',
                 ),
+                array(
+                    'admin_email',
+                    ''
+                ),
             ),
         ),
     ),
