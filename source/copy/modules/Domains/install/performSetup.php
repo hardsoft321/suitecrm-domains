@@ -38,6 +38,7 @@ if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
  * display the words  "Powered by SugarCRM" and "Supercharged by SuiteCRM".
  ********************************************************************************/
 
+if(!function_exists('installStatus')) {
 function installStatus($msg, $cmd = null, $overwrite = false, $before = '[ok]<br>') {
     $fname = 'install/status.json';
     if(!$overwrite && file_exists($fname)) {
@@ -48,6 +49,7 @@ function installStatus($msg, $cmd = null, $overwrite = false, $before = '[ok]<br
         'message' => $msg,
         'command' => $cmd,
     )));
+}
 }
 installStatus($mod_strings['LBL_START'], null, true, '');
 

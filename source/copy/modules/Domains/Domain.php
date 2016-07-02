@@ -29,8 +29,13 @@ class Domain extends SugarBean
 
     function ACLAccess($view,$is_owner='not_set')
     {
+        return $GLOBALS['current_user']->isAdmin() && $this->getCurrentDomain() == DomainReader::$ADMIN_DOMAIN;
+    }
+
+    public function getCurrentDomain()
+    {
         $domainLevel = !empty($GLOBALS['sugar_config']['domain_level']) ? $GLOBALS['sugar_config']['domain_level'] : 3;
-        return $GLOBALS['current_user']->isAdmin() && DomainReader::getDomain($domainLevel) == DomainReader::$ADMIN_DOMAIN;
+        return DomainReader::getDomain($domainLevel);
     }
 
     /**
@@ -46,6 +51,12 @@ class Domain extends SugarBean
         return 0;
     }
 
+    /**
+     * Используются поля:
+     *   domain_name - имя домена в url
+     *   name - краткое название организации (заголовок)
+     *   admin_email - email админа (по умолчанию email пользователя с id = 1 в основной базе)
+     */
     public function createDomain()
     {
         if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || is_dir("domains/{$this->domain_name}")) {
@@ -95,6 +106,7 @@ class Domain extends SugarBean
                 'db_password' => $dbUserPassword,
             ),
             'http_referer' => array('list' => array($newHost)),
+            'host_name' => $newHost,
             'log_dir' => "domains/{$this->domain_name}",
             'log_file' => 'suitecrm.log',
             'site_url' => $newSiteUrl,
@@ -185,11 +197,9 @@ class Domain extends SugarBean
             if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {
                 if (is_string($val) && strcmp($val, 'true') == 0) {
                     $val = true;
-                    //$this->config[$key] = $val;
                 }
                 if (is_string($val) && strcmp($val, 'false') == 0) {
                     $val = false;
-                    //$this->config[$key] = false;
                 }
             }
             $overideString .= override_value_to_string_recursive2('sugar_config', $key, $val);
@@ -215,13 +225,50 @@ class Domain extends SugarBean
         unset($_SESSION['setup_db_port_num']);
         unset($_SESSION['setup_site_admin_password']);
         $GLOBALS['sugar_config']['dbconfig'] = $currentDbConfig;
-        unset($GLOBALS['sugar_config']['dbconfig']);
         unset($_SESSION['setup_site_admin_user_name']);
         unset($_SESSION['setup_site_sugarbeet_automatic_checks']);
         unset($_SESSION['setup_system_name']);
         unset($_SESSION['demoData']);
         DBManagerFactory::disconnectAll();
         $GLOBALS['db'] = DBManagerFactory::getInstance();
+
+        if(`which spm`) {
+            putenv("SUGAR_DOMAIN=".$this->domain_name);
+            shell_exec("spm sandbox-install develop --no-copy");
+            putenv("SUGAR_DOMAIN=");
+        }
+        else {
+            $GLOBALS['log']->error('Domain: no such command - spm');
+        }
+    }
+
+    /**
+     * Только в тестовом окружении использовать эту функцию.
+     * Используются поля:
+     *   domain_name - имя домена в url
+     */
+    public function deleteDomain()
+    {
+        if($this->getCurrentDomain() != DomainReader::$ADMIN_DOMAIN) {
+            throw new Exception("You must be in admin domain");
+        }
+        if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || !is_dir("domains/{$this->domain_name}")) {
+            throw new Exception("Domain {$this->domain_name} not exists");
+        }
+        if(!DomainReader::validateDomainName($this->domain_name)) {
+            throw new Exception("Invalid domain name '{$this->domain_name}'");
+        }
+        $adminDbConfig = $GLOBALS['sugar_config']['dbconfig'];
+        $this->db = DBManagerFactory::getInstance();
+        DomainReader::requireDomainConfig($this->domain_name);
+        if($GLOBALS['sugar_config']['dbconfig']['db_name'] != $adminDbConfig['db_name']) {
+            $this->db->query("DROP DATABASE {$GLOBALS['sugar_config']['dbconfig']['db_name']}");
+        }
+        if($GLOBALS['sugar_config']['dbconfig']['db_user_name'] != $adminDbConfig['db_user_name']) {
+            $this->db->query("DROP USER '{$GLOBALS['sugar_config']['dbconfig']['db_user_name']}'@'localhost'");
+        }
+        rmdir_recursive("domains/{$this->domain_name}");
+        $GLOBALS['sugar_config']['dbconfig'] = $adminDbConfig;
     }
 
     public static function generatePassword($length)
