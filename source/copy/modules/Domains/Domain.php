@@ -234,6 +234,7 @@ class Domain extends SugarBean
 
         if(`which spm`) {
             putenv("SUGAR_DOMAIN=".$this->domain_name);
+            shell_exec("spm repair");
             shell_exec("spm sandbox-install develop --no-copy");
             putenv("SUGAR_DOMAIN=");
         }
