@@ -10,7 +10,7 @@ $manifest = array(
     'is_uninstallable' => true,
     'published_date' => '2016-06-09',
     'type' => 'module',
-    'version' => '1.0.5',
+    'version' => '1.0.6',
 );
 $installdefs = array(
     'id' => 'domains',
