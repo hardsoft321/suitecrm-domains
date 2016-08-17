@@ -141,7 +141,9 @@ UploadStream::register();
 //SugarApplication::startSession();
 
 /* START SUBDOMAIN CONFIG HS321 */
-SugarApplication::startSession();
+if(!isset($_POST['method']) && !isset($_POST['rest_data'])) {
+    SugarApplication::startSession();
+}
 require_once 'modules/Domains/DomainReader.php';
 $domainLevel = !empty($sugar_config['domain_level']) ? $sugar_config['domain_level'] : 3;
 try {
