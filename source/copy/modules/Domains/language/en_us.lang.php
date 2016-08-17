@@ -12,4 +12,7 @@ $mod_strings = array(
     'LNK_NEW_DOMAIN' => 'Create Domain',
     'LNK_DOMAIN_LIST' => 'Domain List',
     'LBL_ADMIN_EMAIL' => 'Admin Email',
+    'LBL_DOMAIN_DIR' => 'Domain folder',
+    'LBL_TITLE_NAME' => 'Title',
+    'LBL_MASK_TO' => 'Enter to',
 );

@@ -30,11 +30,7 @@ $viewdefs ['Domains'] = array (
             'LBL_DOMAIN' => array(
                 array(
                     'domain_name',
-                    'name',
-                ),
-                array(
-                    'admin_email',
-                    ''
+                    'title_name',
                 ),
             ),
         ),

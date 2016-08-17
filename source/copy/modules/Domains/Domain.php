@@ -29,10 +29,31 @@ class Domain extends SugarBean
 
     function ACLAccess($view,$is_owner='not_set')
     {
-        return $GLOBALS['current_user']->isAdmin() && $this->getCurrentDomain() == DomainReader::$ADMIN_DOMAIN;
+        return $GLOBALS['current_user']->isAdmin() && self::getCurrentDomain() == DomainReader::$ADMIN_DOMAIN;
     }
 
-    public function getCurrentDomain()
+    public function retrieve($id = -1, $encode = true, $deleted = true)
+    {
+        if(!DomainReader::validateDomainName($id)) {
+            return null;
+        }
+        $dir = DomainReader::getDomainDirByDomainName($id);
+        if(!is_dir($dir.'/')) {
+            return null;
+        }
+        $this->domain_name = $id;
+        $this->domain_dir = $dir;
+        $this->id = $this->domain_name;
+        $this->name = $this->domain_name;
+        return $this;
+    }
+
+    public function get_summary_text()
+    {
+        return $this->domain_name;
+    }
+
+    public static function getCurrentDomain()
     {
         $domainLevel = !empty($GLOBALS['sugar_config']['domain_level']) ? $GLOBALS['sugar_config']['domain_level'] : 3;
         return DomainReader::getDomain($domainLevel);
@@ -54,12 +75,12 @@ class Domain extends SugarBean
     /**
      * Используются поля:
      *   domain_name - имя домена в url
-     *   name - краткое название организации (заголовок)
-     *   admin_email - email админа (по умолчанию email пользователя с id = 1 в основной базе)
+     *   title_name - краткое название организации (заголовок)
      */
     public function createDomain()
     {
-        if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || is_dir("domains/{$this->domain_name}")) {
+        $domain_dir = DomainReader::getDomainDirByDomainName($this->domain_name);
+        if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || is_dir($domain_dir)) {
             throw new Exception("Domain {$this->domain_name} is busy");
         }
         if(!DomainReader::validateDomainName($this->domain_name)) {
@@ -78,17 +99,21 @@ class Domain extends SugarBean
             throw new Exception("Database already exists: $setup_db_database_name");
         }
 
+        $this->id = $this->domain_name;
+
         $fromaddress = $this->db->getOne("SELECT value FROM config WHERE category = 'notify' AND name = 'fromaddress'");
         $outboundEmail = $this->db->fetchOne("SELECT mail_smtpserver, mail_smtpport, mail_smtpauth_req, mail_smtpuser, mail_smtppass FROM outbound_email WHERE user_id = 1 AND deleted = 0 AND name = 'system' AND type = 'system'");
-        $user = BeanFactory::getBean('Users', '1');
-        $adminEmail = $user ? $user->email1 : '';
-        if(!empty($this->admin_email)) {
-            $adminEmail = $this->admin_email;
-        }
 
-        mkdir_recursive("domains/{$this->domain_name}");
-        make_writable("domains/{$this->domain_name}");
-        $domainConfigFile = "domains/{$this->domain_name}/config.php";
+        $adminEmail = ''; //в качестве email админа, сотрудник сможет назначить свой email
+        //$user = BeanFactory::getBean('Users', '1');
+        //$adminEmail = $user ? $user->email1 : '';
+        //if(!empty($this->admin_email)) {
+        //    $adminEmail = $this->admin_email;
+        //}
+
+        mkdir_recursive($domain_dir);
+        make_writable($domain_dir);
+        $domainConfigFile = "$domain_dir/config.php";
         touch($domainConfigFile);
         if(!(make_writable($domainConfigFile)) || !(is_writable($domainConfigFile))) {
             throw new Exception("Unable to write to the $domainConfigFile file. Check the file permissions");
@@ -107,12 +132,12 @@ class Domain extends SugarBean
             ),
             'http_referer' => array('list' => array($newHost)),
             'host_name' => $newHost,
-            'log_dir' => "domains/{$this->domain_name}",
+            'log_dir' => "$domain_dir",
             'log_file' => 'suitecrm.log',
             'site_url' => $newSiteUrl,
             'unique_key' => md5(create_guid()),
-            'upload_dir' => "domains/{$this->domain_name}/upload/",
-            //'cache_dir' => "domains/{$this->domain_name}/cache/", //кэш нужен разный, как минимум, для файла крона cache/modules/Schedulers/lastrun
+            'upload_dir' => "$domain_dir/upload/",
+            //'cache_dir' => "$domain_dir/cache/", //кэш нужен разный, как минимум, для файла крона cache/modules/Schedulers/lastrun
                                                                     //с другой стороны, шугар обращается в файлы типа cache/jsLanguage/Accounts/ru_ru.js
                                                                     //поэтому сделал файлы domains-precron.php, domains-postcron.php, а кэш общий
         );
@@ -140,7 +165,7 @@ class Domain extends SugarBean
         $GLOBALS['setup_site_admin_user_name'] = $_SESSION['setup_site_admin_user_name'] = 'admin';
         $GLOBALS['setup_site_admin_password'] = $_SESSION['setup_site_admin_password'] = $dbUserPassword;
         $_SESSION['setup_site_sugarbeet_automatic_checks'] = false;
-        $_SESSION['setup_system_name'] = $this->name;
+        $_SESSION['setup_system_name'] = $this->title_name;
         $_SESSION['demoData'] = 'no';
         $currentDbConfig = $GLOBALS['sugar_config']['dbconfig'];
         $install_script = true;
@@ -181,12 +206,6 @@ class Domain extends SugarBean
             $url=$GLOBALS['sugar_config']['site_url'] = $newSiteUrl;
             require 'modules/Users/GeneratePassword.php';
         }
-
-        //основная запись контрагента
-        $acc = BeanFactory::newBean('Accounts');
-        $acc->name = $this->name;
-        $acc->save();
-        $db->query("UPDATE accounts SET id = 'main' WHERE id = '{$acc->id}'"); //id контрагента = main для главной записи
 
         //копирование id созданных почтовых шаблонов
         $overrideArray['passwordsetting']['generatepasswordtmpl'] = $GLOBALS['sugar_config']['passwordsetting']['generatepasswordtmpl'];
@@ -253,7 +272,8 @@ class Domain extends SugarBean
         if($this->getCurrentDomain() != DomainReader::$ADMIN_DOMAIN) {
             throw new Exception("You must be in admin domain");
         }
-        if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || !is_dir("domains/{$this->domain_name}")) {
+        $domain_dir = DomainReader::getDomainDirByDomainName($this->domain_name);
+        if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || !is_dir($domain_dir)) {
             throw new Exception("Domain {$this->domain_name} not exists");
         }
         if(!DomainReader::validateDomainName($this->domain_name)) {
@@ -268,8 +288,12 @@ class Domain extends SugarBean
         if($GLOBALS['sugar_config']['dbconfig']['db_user_name'] != $adminDbConfig['db_user_name']) {
             $this->db->query("DROP USER '{$GLOBALS['sugar_config']['dbconfig']['db_user_name']}'@'localhost'");
         }
-        rmdir_recursive("domains/{$this->domain_name}");
+        rmdir_recursive($domain_dir);
         $GLOBALS['sugar_config']['dbconfig'] = $adminDbConfig;
+    }
+
+    public function gatherInfo()
+    {
     }
 
     public static function generatePassword($length)

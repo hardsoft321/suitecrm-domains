@@ -201,14 +201,14 @@ class Configurator {
 	    /* START SUBDOMAIN CONFIG HS321 */
 	    require_once 'modules/Domains/DomainReader.php';
 	    $domainLevel = !empty($GLOBALS['sugar_config']['domain_level']) ? $GLOBALS['sugar_config']['domain_level'] : 3;
-	    $idAdminDomain = false;
+	    $isAdminDomain = false;
 	    try {
 		$domain = DomainReader::getDomain($domainLevel);
-		$idAdminDomain = $domain === DomainReader::$ADMIN_DOMAIN;
+		$isAdminDomain = $domain === DomainReader::$ADMIN_DOMAIN;
 	    }
 	    catch(Exception $e) {
 	    }
-	    if(!$idAdminDomain) {
+	    if(!$isAdminDomain) {
 		SugarApplication::appendErrorMessage("You can't save config_override in non admin domain");
 		return;
 	    }

@@ -1,5 +1,4 @@
 <?php
-if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point'); 
 /*********************************************************************************
  * SugarCRM Community Edition is a customer relationship management program developed by
  * SugarCRM, Inc. Copyright (C) 2004-2013 SugarCRM Inc.
@@ -38,26 +37,21 @@ if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
  * display the words  "Powered by SugarCRM" and "Supercharged by SuiteCRM".
  ********************************************************************************/
 
-/*********************************************************************************
-
- * Description:  TODO To be written.
- * Portions created by SugarCRM are Copyright (C) SugarCRM, Inc.
- * All Rights Reserved.
- * Contributor(s): ______________________________________..
- ********************************************************************************/
-
-global $mod_strings, $app_strings, $sugar_config;
-
-if(ACLController::checkAccess('Domains', 'edit', true))$module_menu[]=Array("index.php?module=Domains&action=EditView&return_module=Domains", $mod_strings['LNK_NEW_DOMAIN'],"CreateDomain", 'Domains');
-if(ACLController::checkAccess('Domains', 'list', true))$module_menu[]=Array("index.php?module=Domains&action=index", $mod_strings['LNK_DOMAIN_LIST'],"Domains", 'Domains');
-
-/**
- * Войти в домен, используя текущую сессию, можно, если в том домене есть
- * пользователь с таким же id. Оставляем возможность для пользователя с id = '1'.
- */
-if(!empty($_REQUEST['record']) && $GLOBALS['current_user']->id == '1') {
-    $domain = BeanFactory::getBean('Domains', $_REQUEST['record']);
-    if($domain) {
-        $module_menu[]=Array("index.php?module=Domains&action=Mask&record={$domain->domain_name}", $mod_strings['LBL_MASK_TO'].' '.$domain->domain_name,"MaskDomain", 'Domains');
-    }
-}
+$viewdefs['Domains']['DetailView'] = array(
+    'templateMeta' => array(
+        'form' => array(
+            'buttons'=>array()
+        ),
+        'maxColumns' => '2',
+        'widths' => array(
+            array('label' => '10', 'field' => '30'),
+            array('label' => '10', 'field' => '30')
+        ),
+    ),
+    'panels' =>array (
+        array (
+            'domain_name',
+            'domain_dir',
+        ),
+    )
+);

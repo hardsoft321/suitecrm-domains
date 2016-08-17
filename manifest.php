@@ -10,7 +10,7 @@ $manifest = array(
     'is_uninstallable' => true,
     'published_date' => '2016-06-09',
     'type' => 'module',
-    'version' => '1.0.6',
+    'version' => '1.1.0',
 );
 $installdefs = array(
     'id' => 'domains',
@@ -57,6 +57,12 @@ $installdefs = array(
             'from'=> '<basepath>/source/language/modules/Administration/mod_strings_en_us.php',
             'to_module'=> 'Administration',
             'language'=>'en_us'
+        ),
+    ),
+    'menu'=> array(
+        array(
+            'from'=> '<basepath>/source/menu/application/Domains.php',
+            'to_module'=> 'application',
         ),
     ),
 );

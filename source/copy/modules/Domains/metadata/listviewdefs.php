@@ -7,5 +7,8 @@ $listViewDefs['Domains'] = array(
         'label' => 'LBL_DOMAIN_NAME',
         'default' => true,
         'sortable' => false,
+        'link' => true,
+        'id' => 'DOMAIN_NAME',
+        'customCode' => '<a href="index.php?module=Domains&action=DetailView&record={$DOMAIN_NAME}">{$DOMAIN_NAME}</a>',
     ),
 );

@@ -24,6 +24,12 @@ class DomainReader
             $domain = getenv('SUGAR_DOMAIN');
             return !empty($domain) ? $domain : self::$ADMIN_DOMAIN;
         }
+        if(!empty($_SESSION['SUGAR_DOMAIN'])) {
+            return $_SESSION['SUGAR_DOMAIN'];
+        }
+        //if(filter_var($_SERVER['HTTP_HOST'], FILTER_VALIDATE_IP)) {
+        //    return self::$ADMIN_DOMAIN;
+        //}
         $domainParts = explode('.', $_SERVER['HTTP_HOST']);
         if(count($domainParts) >= $domainLevel) {
             $domain = $domainParts[count($domainParts) - $domainLevel];
@@ -54,11 +60,21 @@ class DomainReader
     public static function requireDomainConfig($domain)
     {
         global $sugar_config;
-        if(file_exists("domains/$domain/config.php")) {
-            require "domains/$domain/config.php";
+        $domain_dir = self::getDomainDirByDomainName($domain);
+        if(file_exists("$domain_dir/config.php")) {
+            require "$domain_dir/config.php";
         }
         elseif($domain != self::$ADMIN_DOMAIN) {
             throw new Exception('Config not found');
         }
+    }
+
+    /**
+     * Возвращает имя папки для хранения файлов домена.
+     * См. еще получение всех папок в DomainsListViewData.
+     */
+    public static function getDomainDirByDomainName($domain)
+    {
+        return "domains/$domain";
     }
 }
