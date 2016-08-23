@@ -58,4 +58,9 @@ class DomainsController extends SugarController
             header('Location: index.php');
         }
     }
+
+    //public function action_delete()
+    //{
+    //    $this->bean->deleteDomain();
+    //}
 }

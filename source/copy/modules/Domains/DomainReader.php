@@ -22,7 +22,11 @@ class DomainReader
     {
         if(PHP_SAPI === 'cli') {
             $domain = getenv('SUGAR_DOMAIN');
-            return !empty($domain) ? $domain : self::$ADMIN_DOMAIN;
+            if(!empty($domain)) {
+                echo "SUGAR_DOMAIN={$domain}\n";
+                return $domain;
+            }
+            return self::$ADMIN_DOMAIN;
         }
         if(!empty($_SESSION['SUGAR_DOMAIN'])) {
             return $_SESSION['SUGAR_DOMAIN'];

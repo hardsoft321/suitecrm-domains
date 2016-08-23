@@ -15,4 +15,5 @@ $mod_strings = array(
     'LBL_DOMAIN_DIR' => 'Папка для файлов',
     'LBL_TITLE_NAME' => 'Заголовок',
     'LBL_MASK_TO' => 'Войти в домен',
+    'LBL_SBSTATUS' => 'Статус установки',
 );

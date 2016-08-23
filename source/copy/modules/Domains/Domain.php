@@ -113,17 +113,16 @@ class Domain extends SugarBean
 
         mkdir_recursive($domain_dir);
         make_writable($domain_dir);
+        $domainConfigTmpFile = "$domain_dir/config.tmp.php";
         $domainConfigFile = "$domain_dir/config.php";
-        touch($domainConfigFile);
-        if(!(make_writable($domainConfigFile)) || !(is_writable($domainConfigFile))) {
-            throw new Exception("Unable to write to the $domainConfigFile file. Check the file permissions");
+        touch($domainConfigTmpFile);
+        if(!(make_writable($domainConfigTmpFile)) || !(is_writable($domainConfigTmpFile))) {
+            throw new Exception("Unable to write to the $domainConfigTmpFile file. Check the file permissions");
         }
         $dbUserPassword = self::generatePassword(10);
         $domainLevel = !empty($GLOBALS['sugar_config']['domain_level']) ? $GLOBALS['sugar_config']['domain_level'] : 3;
         $newHost = self::buildHostForDomain($GLOBALS['sugar_config']['host_name'], $this->domain_name, $domainLevel);
         $newSiteUrl = self::buildUrlForDomain($GLOBALS['sugar_config']['site_url'], $this->domain_name, $domainLevel);
-        $overideString = "<?php\n"
-                .'// created: ' . date('Y-m-d H:i:s') . "\n";
         $overrideArray = array(
             'dbconfig' => array(
                 'db_name' => $setup_db_database_name,
@@ -141,6 +140,13 @@ class Domain extends SugarBean
                                                                     //с другой стороны, шугар обращается в файлы типа cache/jsLanguage/Accounts/ru_ru.js
                                                                     //поэтому сделал файлы domains-precron.php, domains-postcron.php, а кэш общий
         );
+
+        /* сохранение настроек во временный файл, чтобы в случае поломки
+         * найти базу и пользователя */
+        $fp = sugar_fopen($domainConfigTmpFile, 'w');
+        $overrideString = self::configToString($overrideArray);
+        fwrite($fp, $overrideString);
+        fclose($fp);
 
         global $beanFiles;
         global $dictionary;
@@ -170,6 +176,7 @@ class Domain extends SugarBean
         $currentDbConfig = $GLOBALS['sugar_config']['dbconfig'];
         $install_script = true;
 
+        $GLOBALS['sugar_domain_dir'] = $domain_dir;
         require 'modules/Domains/install/performSetup.php';
         $db = DBManagerFactory::getInstance(); //это база поддомена
 
@@ -211,22 +218,6 @@ class Domain extends SugarBean
         $overrideArray['passwordsetting']['generatepasswordtmpl'] = $GLOBALS['sugar_config']['passwordsetting']['generatepasswordtmpl'];
         $overrideArray['passwordsetting']['lostpasswordtmpl'] = $GLOBALS['sugar_config']['passwordsetting']['lostpasswordtmpl'];
 
-        //сохранение файла config.php домена
-        foreach($overrideArray as $key => $val) {
-            if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {
-                if (is_string($val) && strcmp($val, 'true') == 0) {
-                    $val = true;
-                }
-                if (is_string($val) && strcmp($val, 'false') == 0) {
-                    $val = false;
-                }
-            }
-            $overideString .= override_value_to_string_recursive2('sugar_config', $key, $val);
-        }
-        $fp = sugar_fopen($domainConfigFile, 'w');
-        fwrite($fp, $overideString);
-        fclose($fp);
-
         unset($_SESSION['setup_db_type']);
         unset($_SESSION['setup_db_manager']);
         unset($_SESSION['setup_db_host_name']);
@@ -251,15 +242,34 @@ class Domain extends SugarBean
         DBManagerFactory::disconnectAll();
         $GLOBALS['db'] = DBManagerFactory::getInstance();
 
+        /* Сохранение файла config.php домена.
+         * Конфиг должен существовать перед запусом spm. */
+        touch($domainConfigFile);
+        if(!(make_writable($domainConfigFile)) || !(is_writable($domainConfigFile))) {
+            throw new Exception("Unable to write to the $domainConfigFile file. Check the file permissions");
+        }
+        $fp = sugar_fopen($domainConfigFile, 'w');
+        $overrideString = self::configToString($overrideArray);
+        fwrite($fp, $overrideString);
+        fclose($fp);
+
         if(`which spm`) {
             putenv("SUGAR_DOMAIN=".$this->domain_name);
-            shell_exec("spm repair");
-            shell_exec("spm sandbox-install develop --no-copy");
+            exec("spm repair", $output, $return_var);
+            if($return_var) {
+                throw new Exception('Breaked at "spm repair"');
+            }
+            exec("spm sandbox-install --no-copy > $domain_dir/domain-first-install.log 2> $domain_dir/domain-first-install.err.log", $output, $return_var);
+            if($return_var) {
+                throw new Exception('Breaked at "spm sandbox-install"');
+            }
             putenv("SUGAR_DOMAIN=");
         }
         else {
             $GLOBALS['log']->error('Domain: no such command - spm');
         }
+
+        unlink($domainConfigTmpFile);
     }
 
     /**
@@ -292,8 +302,32 @@ class Domain extends SugarBean
         $GLOBALS['sugar_config']['dbconfig'] = $adminDbConfig;
     }
 
+    protected function configToString($overrideArray)
+    {
+        global $sugar_config;
+        $overrideString = "<?php\n"
+                .'// created: ' . date('Y-m-d H:i:s') . "\n";
+        foreach($overrideArray as $key => $val) {
+            if (/*in_array($key, $this->allow_undefined) ||*/ isset ($sugar_config[$key])) {
+                if (is_string($val) && strcmp($val, 'true') == 0) {
+                    $val = true;
+                }
+                if (is_string($val) && strcmp($val, 'false') == 0) {
+                    $val = false;
+                }
+            }
+            $overrideString .= override_value_to_string_recursive2('sugar_config', $key, $val);
+        }
+        return $overrideString;
+    }
+
     public function gatherInfo()
     {
+        if(`which spm`) {
+            putenv("SUGAR_DOMAIN=".$this->domain_name);
+            $this->sbstatus = shell_exec("spm sandbox-status");
+            putenv("SUGAR_DOMAIN=");
+        }
     }
 
     public static function generatePassword($length)

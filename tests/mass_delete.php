@@ -36,6 +36,10 @@ if(!defined('sugarEntry'))define('sugarEntry', true);
 require_once('include/entryPoint.php');
 require_once 'modules/Domains/Domain.php';
 
+global $current_user;
+$current_user = new User();
+$current_user->getSystemUser();
+
 foreach($domains as $domain_name) {
     $domain = new Domain();
     $domain->domain_name = $domain_name;

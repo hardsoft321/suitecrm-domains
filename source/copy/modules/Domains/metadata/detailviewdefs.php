@@ -53,5 +53,9 @@ $viewdefs['Domains']['DetailView'] = array(
             'domain_name',
             'domain_dir',
         ),
+        array (
+            'sbstatus',
+            '',
+        ),
     )
 );

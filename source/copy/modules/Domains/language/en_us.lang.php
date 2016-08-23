@@ -15,4 +15,5 @@ $mod_strings = array(
     'LBL_DOMAIN_DIR' => 'Domain folder',
     'LBL_TITLE_NAME' => 'Title',
     'LBL_MASK_TO' => 'Enter to',
+    'LBL_SBSTATUS' => 'Install status',
 );

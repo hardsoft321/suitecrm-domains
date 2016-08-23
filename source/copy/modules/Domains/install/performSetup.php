@@ -40,7 +40,7 @@ if(!defined('sugarEntry') || !sugarEntry) die('Not A Valid Entry Point');
 
 if(!function_exists('installStatus')) {
 function installStatus($msg, $cmd = null, $overwrite = false, $before = '[ok]<br>') {
-    $fname = 'install/status.json';
+    $fname = $GLOBALS['sugar_domain_dir'].'/install_status.json';
     if(!$overwrite && file_exists($fname)) {
         $stat = json_decode(file_get_contents($fname));
         $msg = $stat->message . $before . $msg;

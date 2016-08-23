@@ -151,7 +151,14 @@ try {
     DomainReader::requireDomainConfig($domain);
 }
 catch(Exception $e) {
-    header("HTTP/1.0 404 Not Found");
+    if(!empty($_SESSION['SUGAR_DOMAIN'])) {
+        unset($_SESSION['SUGAR_DOMAIN']);
+        header("Location: index.php?module=Users&action=Logout");
+        exit;
+    }
+    if(PHP_SAPI != 'cli') {
+        header("HTTP/1.0 404 Not Found");
+    }
     echo $e->getMessage();
     exit(1);
 }

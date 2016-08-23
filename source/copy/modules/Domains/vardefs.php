@@ -57,5 +57,13 @@ $dictionary['Domain'] = array(
             'reportable'=>false,
             'inline_edit' => 0,
         ),
+        'sbstatus' => array(
+            'name' => 'sbstatus',
+            'vname' => 'LBL_SBSTATUS',
+            'type' => 'varchar',
+            'source'=>'non-db',
+            'reportable'=>false,
+            'inline_edit' => 0,
+        ),
     ),
 );
