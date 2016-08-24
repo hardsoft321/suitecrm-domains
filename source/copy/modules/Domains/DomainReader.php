@@ -23,7 +23,7 @@ class DomainReader
         if(PHP_SAPI === 'cli') {
             $domain = getenv('SUGAR_DOMAIN');
             if(!empty($domain)) {
-                echo "SUGAR_DOMAIN={$domain}\n";
+                //echo "SUGAR_DOMAIN={$domain}\n"; //если выводить, то в поток ошибок, т.к. spm repair воспринимает как запрос
                 return $domain;
             }
             return self::$ADMIN_DOMAIN;
