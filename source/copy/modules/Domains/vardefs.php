@@ -65,5 +65,13 @@ $dictionary['Domain'] = array(
             'reportable'=>false,
             'inline_edit' => 0,
         ),
+        'crm_url' => array(
+            'name' => 'crm_url',
+            'vname' => 'LBL_CRM_URL',
+            'type' => 'varchar',
+            'source'=>'non-db',
+            'reportable'=>false,
+            'inline_edit' => 0,
+        ),
     ),
 );

@@ -54,8 +54,11 @@ $viewdefs['Domains']['DetailView'] = array(
             'domain_dir',
         ),
         array (
-            'sbstatus',
+            'crm_url',
             '',
+        ),
+        array (
+            'sbstatus',
         ),
     )
 );

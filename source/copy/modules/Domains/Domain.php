@@ -328,6 +328,10 @@ class Domain extends SugarBean
             $this->sbstatus = shell_exec("spm sandbox-status");
             putenv("SUGAR_DOMAIN=");
         }
+        $config = $GLOBALS['sugar_config'];
+        DomainReader::requireDomainConfig($this->domain_name);
+        $this->crm_url = $GLOBALS['sugar_config']['site_url'];
+        $GLOBALS['sugar_config'] = $config;
     }
 
     public static function generatePassword($length)

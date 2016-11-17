@@ -16,4 +16,5 @@ $mod_strings = array(
     'LBL_TITLE_NAME' => 'Заголовок',
     'LBL_MASK_TO' => 'Войти в домен',
     'LBL_SBSTATUS' => 'Статус установки',
+    'LBL_CRM_URL' => 'URL CRM',
 );
