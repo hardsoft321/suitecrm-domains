@@ -1,5 +1,6 @@
 <?php
 require_once 'modules/Domains/DomainReader.php';
+require_once 'modules/Domains/Domains_DBManager.php';
 require_once 'include/dir_inc.php';
 require_once 'include/utils/array_utils.php';
 require_once 'install/install_utils.php';
@@ -90,11 +91,8 @@ class Domain extends SugarBean
             throw new Exception("Invalid domain name '{$this->domain_name}'!");
         }
         $db_prefix = !empty($GLOBALS['sugar_config']['domain_db_prefix']) ? $GLOBALS['sugar_config']['domain_db_prefix'] : '';
-        $setup_db_database_name = $db_prefix.$this->domain_name;
-        $setup_db_sugarsales_user = $setup_db_database_name;
-        if($this->db->getOne("SELECT 1 FROM mysql.user WHERE user = '$setup_db_sugarsales_user'")) {
-            throw new Exception("Database user already exists: $setup_db_sugarsales_user");
-        }
+        $setup_db_database_name = Domains_DBManager::getValidDBName($db_prefix.$this->domain_name, mt_rand(1, 999999));
+        $setup_db_sugarsales_user = $this->getNewUniqueDbUser($setup_db_database_name); //пользователь должен быть новый, так как ему задается новый пароль
         if($this->db->dbExists($setup_db_database_name)) {
             throw new Exception("Database already exists: $setup_db_database_name");
         }
@@ -169,7 +167,7 @@ class Domain extends SugarBean
         $_SESSION['setup_db_drop_tables'] = false;
         $GLOBALS['create_default_user'] = false; //пользователь по умолчанию, помимо admin - не создавать
         $GLOBALS['setup_site_admin_user_name'] = $_SESSION['setup_site_admin_user_name'] = 'admin';
-        $GLOBALS['setup_site_admin_password'] = $_SESSION['setup_site_admin_password'] = $dbUserPassword;
+        $GLOBALS['setup_site_admin_password'] = $_SESSION['setup_site_admin_password'] = $dbUserPassword; //только для удобства пароль admin и базы совпадают
         $_SESSION['setup_site_sugarbeet_automatic_checks'] = false;
         $_SESSION['setup_system_name'] = $this->title_name;
         $_SESSION['demoData'] = 'no';
@@ -240,7 +238,8 @@ class Domain extends SugarBean
         unset($_SESSION['setup_system_name']);
         unset($_SESSION['demoData']);
         DBManagerFactory::disconnectAll();
-        $GLOBALS['db'] = DBManagerFactory::getInstance();
+        $GLOBALS['db'] = DBManagerFactory::getInstance(); //TODO: База не везде восстанавливается.
+                                                          // Поэтому, например, в планировщике домен лучше создавать через запуск shell-команды
 
         /* Сохранение файла config.php домена.
          * Конфиг должен существовать перед запусом spm. */
@@ -255,7 +254,7 @@ class Domain extends SugarBean
 
         if(`which spm`) {
             putenv("SUGAR_DOMAIN=".$this->domain_name);
-            exec("spm repair", $output, $return_var);
+            exec("spm repair | spm dbquery", $output, $return_var);
             if($return_var) {
                 throw new Exception('Breaked at "spm repair"');
             }
@@ -270,6 +269,22 @@ class Domain extends SugarBean
         }
 
         unlink($domainConfigTmpFile);
+    }
+
+    /**
+     * TODO: Захардкодено для mysql
+     */
+    protected function getNewUniqueDbUser($name, $recursion = 0)
+    {
+        $forceRand = $recursion !== 0;
+        $user = Domains_DBManager::getValidDBName($name, mt_rand(1, 999999), 'user', $forceRand);
+        if($this->db->getOne("SELECT 1 FROM mysql.user WHERE user = '".$this->db->quote($user)."'")) {
+            if($recursion > 16) {
+                throw new Exception("Database user already exists: $user");
+            }
+            return $this->getNewUniqueDbUser($name, $recursion + 1);
+        }
+        return $user;
     }
 
     /**

@@ -54,7 +54,7 @@ class DomainReader
      */
     public static function validateDomainName($domain)
     {
-        return !preg_match('#[^A-Z0-9\-]#i', $domain);
+        return !empty($domain) && is_string($domain) && !preg_match('#[^A-Z0-9\-]#i', $domain);
     }
 
     /**

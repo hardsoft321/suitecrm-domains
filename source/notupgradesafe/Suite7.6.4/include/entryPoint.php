@@ -165,6 +165,8 @@ catch(Exception $e) {
 if(!empty($_SESSION['SUGAR_DOMAIN'])) {
     $_SESSION['user_error_message']['SUGAR_DOMIAN'] = "Domain masked to '{$_SESSION['SUGAR_DOMAIN']}'";
 }
+unset($domainLevel);
+unset($domain);
 /* END SUBDOMAIN CONFIG HS321 */
 
 ///////////////////////////////////////////////////////////////////////////////

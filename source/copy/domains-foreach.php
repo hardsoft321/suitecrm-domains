@@ -25,6 +25,10 @@ $folders = glob('domains/*');
 natsort($folders);
 foreach($folders as $dir) {
     $domain = basename($dir);
+    if(!is_file($dir.'/config.php')) {
+        echo "\nDomain $domain is not ready.\n";
+        continue;
+    }
     echo "\nProcessing domain $domain...\n";
     putenv("SUGAR_DOMAIN=$domain");
     $output = array();
