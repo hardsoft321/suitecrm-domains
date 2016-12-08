@@ -18,6 +18,8 @@ class Domain extends SugarBean
     public static $ADMIN_DOMAIN = 'admin';
     public $domain_name;
 
+    const ERR_TOO_LONG = 1;
+
     public $additional_meta_fields = array( //против Notice в EditView2.php
         'id' => array (
             'name' => 'id',
@@ -66,11 +68,31 @@ class Domain extends SugarBean
      */
     public function validateDomainName2($domain)
     {
-        $fields = $this->getFieldDefinitions();
-        if(strlen($domain) > $fields['domain_name']['len']) {
-            return 1;
+        if(strlen($domain) > $this->getDomainMaxLength()) {
+            return self::ERR_TOO_LONG;
         }
         return 0;
+    }
+
+    public function getDomainMaxLength()
+    {
+        $fields = $this->getFieldDefinitions();
+        return $fields['domain_name']['len'];
+    }
+
+    public function domainExists()
+    {
+        $domain_dir = DomainReader::getDomainDirByDomainName($this->domain_name);
+        return $this->domain_name == self::$ADMIN_DOMAIN || is_dir($domain_dir);
+    }
+
+    public function getCreateDomainCommand()
+    {
+        $cmd = "php domains-create.php ".escapeshellarg($this->domain_name);
+        if(!empty($this->title_name)) {
+            $cmd .= " --title=".escapeshellarg($this->title_name);
+        }
+        return $cmd;
     }
 
     /**
@@ -81,14 +103,14 @@ class Domain extends SugarBean
     public function createDomain()
     {
         $domain_dir = DomainReader::getDomainDirByDomainName($this->domain_name);
-        if(empty($this->domain_name) || $this->domain_name == self::$ADMIN_DOMAIN || is_dir($domain_dir)) {
-            throw new Exception("Domain {$this->domain_name} is busy");
-        }
         if(!DomainReader::validateDomainName($this->domain_name)) {
             throw new Exception("Invalid domain name '{$this->domain_name}'");
         }
         if($this->validateDomainName2($this->domain_name) !== 0) {
             throw new Exception("Invalid domain name '{$this->domain_name}'!");
+        }
+        if($this->domainExists()) {
+            throw new Exception("Domain {$this->domain_name} is busy");
         }
         $db_prefix = !empty($GLOBALS['sugar_config']['domain_db_prefix']) ? $GLOBALS['sugar_config']['domain_db_prefix'] : '';
         $setup_db_database_name = Domains_DBManager::getValidDBName($db_prefix.$this->domain_name, mt_rand(1, 999999));
