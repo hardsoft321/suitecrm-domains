@@ -280,7 +280,7 @@ class Domain extends SugarBean
             if($return_var) {
                 throw new Exception('Breaked at "spm repair"');
             }
-            exec("spm sandbox-install --no-copy > $domain_dir/domain-first-install.log 2> $domain_dir/domain-first-install.err.log", $output, $return_var);
+            exec("spm sandbox-install --no-copy --lock-file=$domain_dir/.spm.lock --log-file=$domain_dir/spm.log > $domain_dir/domain-first-install.log 2> $domain_dir/domain-first-install.err.log", $output, $return_var);
             if($return_var) {
                 throw new Exception('Breaked at "spm sandbox-install"');
             }

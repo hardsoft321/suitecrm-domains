@@ -33,7 +33,8 @@ foreach($folders as $dir) {
     putenv("SUGAR_DOMAIN=$domain");
     $output = array();
     $return_var = null;
-    exec($command, $output, $return_var);
+    $domainCommand = str_replace('@@DOMAIN@@', $domain, $command);
+    exec($domainCommand, $output, $return_var);
     foreach($output as $str) {
         echo $str."\n";
     }

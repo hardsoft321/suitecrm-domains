@@ -26,8 +26,9 @@
 
 Запуск команд для каждого домена:
   php domains-foreach.php <shell_command>
+В тексте команды подстрока @@DOMAIN@@ заменяется на имя домена
 например
-  php domains-foreach.php "spm repair | spm dbquery"
+  php domains-foreach.php "spm repair | spm dbquery > domains/@@DOMAIN@@/repair.log"
 
 При этом имя домена доступно через переменную окружения SUGAR_DOMAIN.
 
